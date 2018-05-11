@@ -4,62 +4,81 @@ import urllib.request
 import RPi.GPIO as GPIO
 
 # RPi GPIO pins used
-temp_pin = 22
-pH_pin = 23
-DOx_pin = 24
+temp_gpio_pin = 22
+pH_gpio_pin = 23
+DOx_gpio_pin = 24
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
-GPIO.setup(temp_pin, GPIO.OUT)
-GPIO.setup(pH_pin, GPIO.OUT)
-GPIO.setup(DOx_pin, GPIO.OUT)
+GPIO.setup(temp_gpio_pin, GPIO.OUT)
+GPIO.setup(pH_gpio_pin, GPIO.OUT)
+GPIO.setup(DOx_gpio_pin, GPIO.OUT)
 
-GPIO.output(temp_pin, GPIO.LOW)
-GPIO.output(pH_pin, GPIO.LOW)
-GPIO.output(DOx_pin, GPIO.LOW)
+GPIO.output(temp_gpio_pin, GPIO.LOW)
+GPIO.output(pH_gpio_pin, GPIO.LOW)
+GPIO.output(DOx_gpio_pin, GPIO.LOW)
 
 
 def current_timestamp():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+def toggle_sensor_led(target, color):
+    target.bg = color
+
+
 def read_sensors():
     # set sensor thresholds here
     temp, pH, DOx = [temp_th.value, ph_th.value, dox_th.value]
 
-    temp_server.value = temp
-    ph_server.value = pH
-    dox_server.value = DOx
-
     try:
-        with urllib.request.urlopen('http://192.168.137.88/info/gettraffic/1/') as response:
+        with urllib.request.urlopen('http://127.0.0.1/info/gettraffic/1/') as response:
             data = response.read().rstrip().decode('UTF-8')
             _data = eval(data)
-            r_ts, r_temp, r_ph, r_dox = [_data[0][0], _data[1][0], _data[2][0], _data[3][0]]
-            temp_server.value = r_temp
-            ph_server.value = r_temp
-            dox_server.value = r_temp
+            r_temp, r_ph, r_dox = [float(_data[1][0]), float(_data[2][0]), float(_data[3][0])]
+            temp_server.value = str(r_temp)
+            ph_server.value = str(r_ph)
+            dox_server.value = str(r_dox)
 
-        if r_temp >= temp:
-            print('Temp relay if ON')
-            GPIO.output(temp_pin, GPIO.HIGH)
+        if temp.isdigit():
+            if r_temp >= float(temp):
+                print('Temp relay if ON')
+                toggle_sensor_led(temp_led, 'green')
+            # GPIO.output(temp_gpio_pin, GPIO.HIGH)
+            else:
+                print('Temp relay OFF')
+                toggle_sensor_led(temp_led, 'red')
+                #    GPIO.output(temp_gpio_pin, GPIO.LOW)
         else:
-            print('Temp relay OFF')
-            GPIO.output(temp_pin, GPIO.LOW)
+            print('No Threshold Supplied, Temp realy ON')
+            toggle_sensor_led(temp_led, 'green')
 
-        if r_ph >= pH:
-            print('pH relay is ON')
-            GPIO.output(pH_pin, GPIO.HIGH)
+        if pH.isdigit():
+            if r_ph >= float(pH):
+                print('pH relay is ON')
+                toggle_sensor_led(ph_led, 'green')
+            # GPIO.output(pH_gpio_pin, GPIO.HIGH)
+            else:
+                print('Temp relay OFF')
+                toggle_sensor_led(ph_led, 'red')
+                #   GPIO.output(pH_gpio_pin, GPIO.LOW)
         else:
-            print('Temp relay OFF')
-            GPIO.output(pH_pin, GPIO.LOW)
+            print('No Threshold Supplied, PH realy ON')
+            toggle_sensor_led(ph_led, 'green')
 
-        if r_dox >= DOx:
-            GPIO.output(DOx_pin, GPIO.HIGH)
-            print('DOx relay is ON')
+        if DOx.isdigit():
+            if r_dox >= float(DOx):
+                #    GPIO.output(DOx_gpio_pin, GPIO.HIGH)
+                print('DOx relay is ON')
+                toggle_sensor_led(dox_led, 'green')
+            else:
+                print('DOx relay is OFF')
+                toggle_sensor_led(dox_led, 'red')
+                #    GPIO.output(DOx_gpio_pin, GPIO.LOW)
         else:
-            print('DOx relay is OFF')
-            GPIO.output(DOx_pin, GPIO.LOW)
+            print('No Threshold Supplied, DOx realy ON')
+            toggle_sensor_led(dox_led, 'green')
+
     except KeyboardInterrupt:
         print("interrupted")
 
@@ -84,7 +103,7 @@ oxygen_label.width = 15
 
 temp_th = TextBox(box, text="0", grid=[1, 2])
 ph_th = TextBox(box, text="0", grid=[2, 2])
-dox_th = TextBox(box,text="0",  grid=[3, 2])
+dox_th = TextBox(box, text="0", grid=[3, 2])
 temp_th.width = 10
 temp_th.font = 'Source code pro'
 ph_th.width = 10
@@ -96,21 +115,21 @@ divider = Text(box, text="", grid=[1, 3])
 divider.width = 10
 divider.font = 'Source code pro'
 
-temp_btn = PushButton(box, text='', grid=[1, 4])
-ph_btn = PushButton(box, text='', grid=[2, 4])
-dox_btn = PushButton(box, text='', grid=[3, 4])
-temp_btn.width = 2
-ph_btn.width = 2
-dox_btn.width = 2
-temp_btn.height = 1
-ph_btn.height = 1
-dox_btn.height = 1
-temp_btn.bg = 'red'
-ph_btn.bg = 'red'
-dox_btn.bg = 'red'
-temp_btn.disable()
-ph_btn.disable()
-dox_btn.disable()
+temp_led = PushButton(box, text='', grid=[1, 4])
+ph_led = PushButton(box, text='', grid=[2, 4])
+dox_led = PushButton(box, text='', grid=[3, 4])
+temp_led.width = 2
+ph_led.width = 2
+dox_led.width = 2
+temp_led.height = 1
+ph_led.height = 1
+dox_led.height = 1
+temp_led.bg = 'red'
+ph_led.bg = 'red'
+dox_led.bg = 'red'
+temp_led.disable()
+ph_led.disable()
+dox_led.disable()
 
 divider2 = Text(box, text="", grid=[1, 5])
 divider2.width = 10
